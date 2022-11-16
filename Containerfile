@@ -2,6 +2,8 @@ FROM docker.io/library/ubuntu:latest
 
 RUN apt update && \
   DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
+  ca-certificates \
+  curl \
   git \
   ffmpeg \
   build-essential \
@@ -10,6 +12,8 @@ RUN apt update && \
   python3-distutils && \
   apt clean && \
   rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://deno.land/x/install/install.sh | DENO_INSTALL=/usr/local sh -s --
 
 COPY entrypoint.sh /entrypoint.sh
 COPY server.ts /srv/server.ts
