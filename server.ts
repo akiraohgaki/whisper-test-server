@@ -49,16 +49,21 @@ await serve(async (request) => {
         headers: { 'Content-Type': 'text/plain' },
       });
     } else if (request.method === 'POST' && url.pathname === '/transcribe') {
-      if (!processing) {
+      let message = '';
+
+      if (processing) {
+        message = 'Sorry, your request has been ignored because another one processing currently.';
+      } else {
+        message = 'Now processing...';
         const formData = await request.formData();
         const data = await new Response(formData.get('audio')).arrayBuffer();
 
         await Deno.writeFile('/tmp/audio', new Uint8Array(data));
-        await Deno.writeTextFile('/tmp/transcript.txt', 'Now processing...');
+        await Deno.writeTextFile('/tmp/transcript.txt', message);
 
         runWhisper(url.searchParams.get('model') || 'base', url.searchParams.get('language') || 'en');
       }
-      return new Response('Now processing...', {
+      return new Response(message, {
         status: 200,
         headers: { 'Content-Type': 'text/plain' },
       });
