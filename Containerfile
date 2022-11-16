@@ -4,6 +4,7 @@ RUN apt update && \
   DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
   ca-certificates \
   curl \
+  unzip \
   git \
   ffmpeg \
   build-essential \
