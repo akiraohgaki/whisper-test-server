@@ -22,8 +22,7 @@ COPY deno.json /srv/deno.json
 COPY deno.lock /srv/deno.lock
 
 RUN chmod 755 /entrypoint.sh && \
-  deno cache /srv/server.ts && \
-  pip install git+https://github.com/openai/whisper.git
+  deno cache /srv/server.ts
 
 EXPOSE 80
 
