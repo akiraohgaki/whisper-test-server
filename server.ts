@@ -1,49 +1,62 @@
-import { serve } from "https://deno.land/std@0.164.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.164.0/http/server.ts';
+import { $ } from 'https://deno.land/x/zx_deno@1.2.2/mod.mjs';
 
-const port = 8080;
+const port = 80;
+
+let processing = false;
+
+const runWhisper = async (model: string, language: string) => {
+  processing = true;
+  await $`whisper /tmp/audio --model ${model} --language ${language} --output_dir /tmp`;
+  processing = false;
+};
 
 await serve(async (request) => {
   try {
-    if (request.method === "GET" && request.url === "/health") {
-      return new Response(null, {
+    const url = new URL(request.url);
+
+    if (request.method === 'GET' && url.pathname === '/health') {
+      return new Response('', {
         status: 200,
-        headers: { "Content-Type": "application/octet-stream" },
+        headers: { 'Content-Type': 'text/plain' },
       });
-    } else if (request.method === "GET" && request.url === "/transcript") {
-      let data = "";
+    } else if (request.method === 'GET' && url.pathname === '/transcript') {
+      let data = '';
       try {
-        data = await Deno.readTextFile("/tmp/transcript");
+        data = await Deno.readTextFile('/tmp/audio.txt');
       } catch {
         void 0;
       }
       return new Response(data, {
         status: 200,
-        headers: { "Content-Type": "text/plain" },
+        headers: { 'Content-Type': 'text/plain' },
       });
-    } else if (request.method === "POST" && request.url === "/transcribe") {
-      const formData = await request.formData();
-      const data = await new Response(formData.get("audio")).arrayBuffer();
-      await Deno.writeFile("/tmp/audio", new Uint8Array(data));
-      try {
-        await Deno.remove("/tmp/transcript");
-      } catch {
-        void 0;
+    } else if (request.method === 'POST' && url.pathname === '/transcribe') {
+      if (!processing) {
+        const formData = await request.formData();
+        const data = await new Response(formData.get('audio')).arrayBuffer();
+        await Deno.writeFile('/tmp/audio', new Uint8Array(data));
+        try {
+          await Deno.remove('/tmp/audio.txt');
+        } catch {
+          void 0;
+        }
+        runWhisper(url.searchParams.get('model') || 'base', url.searchParams.get('language') || 'en');
       }
-      // run whisper
-      return new Response("Now processing...", {
+      return new Response('Now processing...', {
         status: 200,
-        headers: { "Content-Type": "text/plain" },
+        headers: { 'Content-Type': 'text/plain' },
       });
     } else {
-      return new Response("", {
+      return new Response('Bad request', {
         status: 400,
-        headers: { "Content-Type": "text/plain" },
+        headers: { 'Content-Type': 'text/plain' },
       });
     }
   } catch {
-    return new Response("", {
+    return new Response('Internal server error', {
       status: 500,
-      headers: { "Content-Type": "text/plain" },
+      headers: { 'Content-Type': 'text/plain' },
     });
   }
 }, { port: port });
