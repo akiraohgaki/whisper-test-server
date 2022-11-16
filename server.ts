@@ -6,17 +6,22 @@ const port = 80;
 let processing = false;
 
 const runWhisper = async (model: string, language: string) => {
-  processing = true;
-  const startMessage = `Transcribe started at ${(new Date()).toUTCString()}`;
-  console.log(startMessage);
+  try {
+    processing = true;
+    const startMessage = `Transcribe started at ${(new Date()).toUTCString()}`;
+    console.log(startMessage);
 
-  await $`whisper /tmp/audio --model ${model} --language ${language} --output_dir /tmp`;
+    await $`whisper /tmp/audio --model ${model} --language ${language} --output_dir /tmp`;
 
-  processing = false;
-  const finishMessage = `Transcribe finished at ${(new Date()).toUTCString()}`;
-  console.log(finishMessage);
+    processing = false;
+    const finishMessage = `Transcribe finished at ${(new Date()).toUTCString()}`;
+    console.log(finishMessage);
 
-  await Deno.writeTextFile('/tmp/audio.txt', `\n\n--\n\n${startMessage}\n${finishMessage}`, { append: true });
+    const transcript = await Deno.readTextFile('/tmp/audio.txt');
+    await Deno.writeTextFile('/tmp/transcript.txt', `${startMessage}\n${finishMessage}\n\n----\n\n${transcript}\n`);
+  } catch {
+    console.log('Error occured while executing runWhisper');
+  }
 };
 
 await serve(async (request) => {
@@ -34,7 +39,7 @@ await serve(async (request) => {
       let data = '';
 
       try {
-        data = await Deno.readTextFile('/tmp/audio.txt');
+        data = await Deno.readTextFile('/tmp/transcript.txt');
       } catch {
         void 0;
       }
@@ -49,12 +54,7 @@ await serve(async (request) => {
         const data = await new Response(formData.get('audio')).arrayBuffer();
 
         await Deno.writeFile('/tmp/audio', new Uint8Array(data));
-
-        try {
-          await Deno.remove('/tmp/audio.txt');
-        } catch {
-          void 0;
-        }
+        await Deno.writeTextFile('/tmp/transcript.txt', 'Now processing...');
 
         runWhisper(url.searchParams.get('model') || 'base', url.searchParams.get('language') || 'en');
       }
